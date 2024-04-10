@@ -98,7 +98,6 @@ ipython_config.py
 #poetry.lock
 
 # FastAPI stuff:
-__pycache__/
 .env
 
 .idea/*

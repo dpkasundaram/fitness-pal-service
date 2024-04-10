@@ -1,12 +1,10 @@
-from typing import List, Union
-
 from fastapi import FastAPI
 
+from db.fitness_db import create_user, delete_user, read_user, read_all_users, update_user
 from model.user import User
 
 app = FastAPI()
 
-database = {}
 
 @app.get("/")
 def root():
@@ -17,61 +15,72 @@ def root():
 def say_hello(name: str):
     return {"message": f"Welcome {name}"}
 
+
 @app.get("/users/{user_id}")
 def get_user_name(user_id: int) -> dict:
-    """
-    get user info from database using user_id
-    Args:
-        user_id: user's unique id
 
-    Returns: user info dictionary
+    user_info = read_user(user_id)
 
-    """
+    if user_info:
+        return user_cursor_to_user_info(user_info)
 
-    if user_id not in database:
-        return {"message": "User id not in database"}
+    return {"message": "User not found"}
 
-    return database[user_id].get_user_info()
+
+@app.get("/users/")
+def get_all_user() -> list[dict]:
+
+    user_info_list = read_all_users()
+    if user_info_list:
+        return [user_cursor_to_user_info(user_info) for user_info in user_info_list]
+    else:
+        return []
+
+
+def user_cursor_to_user_info(user_cursor):
+
+    return {
+        "user_id": user_cursor[0],
+        "name": user_cursor[1],
+        "age": user_cursor[2],
+        "height": user_cursor[3],
+        "weight": user_cursor[4],
+    }
+
+
 
 @app.post("/users")
-def add_user(user_id: int, name: str, age: int, height: float, weight: float) -> dict:
-    """
-    add new user to database
-    Args:
-        user_id:
-        name:
-        age:
-        height:
-        weight:
-
-    Returns:
-
-    """
-    if user_id in database.keys():
-        return {"message": "User already exists"}
-    # insert into database
-    new_user = User(
-        user_id=user_id,
-        name=name,
-        age=age,
-        height=height,
-        weight=weight
+def add_user(user: User) -> dict:
+    create_user(
+        user_id=user.user_id,
+        name=user.name,
+        age=user.age,
+        height=user.height,
+        weight=user.weight,
     )
-    database[user_id] = new_user
-    return new_user.get_user_info()
+
+    return {"message": "New User Created"}
 
 
-@app.get("/users")
-def get_all_users() -> List[dict]:
-    """
-    get all users
-    Returns:
+@app.delete("/users/{user_id}")
+def delete_user_api(user_id: int) -> dict:
+    try:
+        delete_user(user_id)
+        return {"message": "User deleted successfully"}
+    except Exception as e:
+        print(f"Error occur: {e}")
+        return {"message": "Unable to Delete User"}
 
-    """
-    #base condition
-    if not database:
-        return [{"message": "No users found"}]
 
-    return [user.get_user_info() for _, user in database.items()]
+@app.put("/users")
+def update_user_api(user: User) -> dict:
+    update_user(
+        user_id=user.user_id,
+        name=user.name,
+        age=user.age,
+        height=user.height,
+        weight=user.weight,
+    )
 
+    return {"message": "User updated successfully"}
 
